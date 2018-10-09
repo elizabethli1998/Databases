@@ -1,0 +1,44 @@
+// Item 1
+
+MATCH (sp:Person)<-[:S2P]-(student)<-[:Mentors]-(mentor)-[M2P]-(mp)
+WHERE exists(mp.Name) AND exists(sp.Name) 
+RETURN sp.Name as Student, mp.Name as Mentor
+
+// Item 2
+
+MATCH (student:Student)
+WHERE student.Classification='Sophomore'
+RETURN student.Classification as Classification, AVG(student.GPA) as AverageGPA
+
+// Item 3
+
+MATCH (sperson)<-[:S2P]-(student2)-[:Taking]->(enrollment)<-[:Taking]-(student:Student)<-[:Mentors]-(mentor)-[:F2P]->(fperson)
+RETURN sperson.Name as EnrolledStudent, fperson.Name as Mentor
+
+// Item 4
+
+MATCH (person)<-[:S2P]-(student:Student)-[r:Taking]->(enrollment)
+WHERE r.Grade ='A'
+RETURN DISTINCT person.Name as Student
+
+// Item 5
+
+MATCH (c:Course)-[PreReq]->(cc:Course) WHERE c.CourseCode = "CS311"
+RETURN cc.CourseCode as CourseCode;
+
+// Item 6
+
+MATCH (faculty:Faculty)-[:F2P]->(person)
+WHERE faculty.Salary>=100000
+RETURN person.Name as Name, faculty.Rank as Rank
+
+// Item 7
+
+MATCH (student)<-[:Mentors]-(faculty:Faculty)-[:F2P]->(person)
+RETURN person.Name as Name, student.Classification as Classification, student.GPA as GPA
+
+// Item 8
+
+MATCH (facultyPerson:Person)<-[:F2P]-(f:Faculty)-[:Offers]->(o:Offering), (s:Student)-[t:Taking]->(oo:Offering)-[:Covers]->(c:Course)
+WHERE o.ID in oo.ID
+RETURN c.CourseName as CourseName, oo.Section as Section, facultyPerson.Name as InstructorName, t.EnrollmentID as EnrollmentID;
