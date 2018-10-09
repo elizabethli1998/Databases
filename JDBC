@@ -1,0 +1,199 @@
+//Elizabeth L
+package jdbcProject1;
+
+import java.sql.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.math.*;
+
+public class JDBC_Students {
+	public static void main(String[] args) throws Exception {
+		// Load and register a JDBC driver
+		try {
+			// Load the driver (registers itself)
+			Class.forName("com.mysql.jdbc.Driver");
+		} catch (Exception E) {
+			System.err.println("Unable to load driver.");
+			E.printStackTrace();
+		}
+		try {
+			// Connect to the database
+			Connection conn1;
+			String dbUrl = "jdbc:mysql://csdb.cs.iastate.edu:3306/db363elli1998";
+			String user = "dbu363elli1998";
+			String password = "UpwR6697";
+			conn1 = DriverManager.getConnection(dbUrl, user, password);
+			System.out.println("*** Connected to the database ***");
+
+			// Create Statement and ResultSet variables to use throughout the project
+			Statement statementS = conn1.createStatement();
+			Statement statementNewS = conn1.createStatement();
+			Statement statementE = conn1.createStatement();
+			Statement statementB = conn1.createStatement();
+			Statement statementP = conn1.createStatement();
+			ResultSet student = null;
+			ResultSet enrollment = null;
+			ResultSet studentB = null;
+			ResultSet person = null;
+
+			// get information of all students
+			student = statementS.executeQuery("Select StudentID, Classification, CreditHours, GPA from Student");
+			
+			int initialTotalCreditHours;
+			int newTotalCreditHours = 0;
+			float initialGPA;
+			float newGPA = 0;
+			String grade;
+			float gradeNum = 0;
+			String studentID = null;
+			String enrollmentID;
+			String classification = "";
+
+			while (student.next()) {
+				//get value of initial total Credit Hours and initial GPA from each tuple
+				initialTotalCreditHours = student.getInt("CreditHours");
+				newTotalCreditHours = initialTotalCreditHours;
+				initialGPA = student.getFloat("GPA");
+				studentID = student.getString("StudentID");
+				
+				newGPA = initialGPA * initialTotalCreditHours;
+				
+				enrollment = statementE.executeQuery("Select Enrollment.StudentID, Student.StudentID, Grade from Enrollment, Student Where Enrollment.StudentID = Student.StudentID");
+				
+				while(enrollment.next()) {
+					enrollmentID = enrollment.getString("StudentID");
+					
+					if(studentID.equals(enrollmentID)){
+						grade = enrollment.getString("Grade");
+						
+						switch(grade) {
+							case "A" :
+								gradeNum = (float) 4.00;
+								break;
+							case "A-" :
+								gradeNum = (float) 3.66;
+								break;
+							case "B+" :
+								gradeNum = (float) 3.33;
+								break;
+							case "B" :
+								gradeNum = (float) 3.00;
+								break;
+							case "B-" :
+								gradeNum = (float) 2.66;
+								break;
+							case "C+" :
+								gradeNum = (float) 2.33;
+								break;
+							case "C" :
+								gradeNum = (float) 2.00;
+								break;
+							case "C-" :
+								gradeNum = (float) 1.66;
+								break;
+							case "D+" :
+								gradeNum = (float) 1.33;
+								break;
+							case "D" :
+								gradeNum = (float) 1.00;
+								break;
+							case "F" :
+								gradeNum = (float) 0.00;
+								break;
+							default :
+								System.out.println("Invalid Grade");
+						}
+						
+						newGPA = newGPA + (gradeNum * (float) 3);
+												
+						newTotalCreditHours += 3;
+					}
+				}
+				
+				newGPA = newGPA / (float) newTotalCreditHours;
+				
+				newGPA = Math.round(newGPA * 100)/(float)100.0;
+				
+				if(newTotalCreditHours <= 29){
+					classification = "Freshman";
+				}
+				else if(newTotalCreditHours <= 59){
+					classification = "Sophomore";
+				}
+				else if(newTotalCreditHours <= 89){
+					classification = "Junior";
+				}
+				else{
+					classification = "Senior";
+				}
+							
+				statementNewS.executeUpdate("Update Student Set Classification = '" + classification + "', GPA = '" + newGPA + "', CreditHours = '" + newTotalCreditHours + "' Where StudentID = '" + studentID + "';");
+			
+			}
+			int studentCount = 1;
+			float previousGPA = 0;
+			float currentGPA = 0;
+			String studentName = "";
+			String mentorName = "";
+			String personName = "";
+			String personID = "";
+			String mentorID = "";
+			FileWriter fw = new FileWriter("JDBC_StudentsOutput.txt");
+			
+			studentB = statementB.executeQuery("Select StudentID, Classification, MentorID, GPA from Student Where Classification = 'Senior' Order By GPA Desc");
+			
+			while(studentB.next())
+			{
+				currentGPA = studentB.getFloat("GPA");
+				if(studentCount > 5 && previousGPA != currentGPA)
+				{
+					break;
+				}
+				studentID = studentB.getString("StudentID");
+				mentorID = studentB.getString("MentorID");
+				previousGPA = currentGPA;
+				
+				person = statementP.executeQuery("Select Name, ID from Person");
+				while(person.next())
+				{
+					personID = person.getString("ID");
+					personName = person.getString("Name");
+					if(personID.equals(studentID))
+					{
+						studentName = personName;
+					}
+					else if(personID.equals(mentorID))
+					{
+						mentorName = personName;
+					}
+					
+					
+				}
+				studentCount++;
+				//fw.write("\nStudent Name:" + " " + studentName + "    " + "\nMentor Name:" + " " + mentorName + "    " + "\nCurrent GPA:" + " " + currentGPA + "  ");
+				fw.write("Rank " + (studentCount -1) + "\nStudent Name: " + studentName + "\nMentor Name: " + mentorName + "\nStudent GPA " + currentGPA + "\n\n");
+			
+			}
+			
+			// Close all statements and connections
+			statementS.close();
+			statementNewS.close();
+			statementE.close();
+			student.close();
+			enrollment.close();
+			studentB.close();
+			person.close();
+			statementB.close();
+			statementP.close();
+			fw.close();
+			conn1.close();
+
+		}
+		catch (SQLException e) {
+			System.out.println("SQLException: " + e.getMessage());
+			System.out.println("SQLState: " + e.getSQLState());
+			System.out.println("VendorError: " + e.getErrorCode());
+		}
+	}
+}
